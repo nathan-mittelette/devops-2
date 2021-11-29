@@ -1,0 +1,43 @@
+version: "3.7"
+
+services:
+  prom:
+    image: prom/prometheus:v2.30.2
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - local-network
+
+  grafana:
+    image: grafana/grafana:8.2.0
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+      - ./grafana/prometheus-dashboard.json:/var/lib/grafana/dashboards/prometheus-dashboard.json
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_DATABASE_TYPE=postgres
+      - GF_DATABASE_HOST=postgres
+      - GF_DATABASE_USER=user
+      - GF_DATABASE_PASSWORD=password
+    networks:
+      - local-network
+
+  postgres:
+    image: postgres:13
+    environment:
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_USER=user
+      - POSTGRES_DB=grafana
+    networks:
+      - local-network
+    restart: on-failure
+
+networks:
+  local-network:
+    name: local
