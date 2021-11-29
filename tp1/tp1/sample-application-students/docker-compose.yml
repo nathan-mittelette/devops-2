@@ -1,0 +1,98 @@
+version: '3.3'
+services:
+  backend:
+    container_name: backend
+    build: ./sample-application-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://database:5432/SchoolOrganisation
+    networks:
+      - app-network
+    depends_on:
+      - database
+
+  database:
+    container_name: database
+    image: postgres:13-alpine
+    networks:
+      - app-network
+    environment:
+      - POSTGRES_PASSWORD=takimapass
+      - POSTGRES_USER=takima
+      - POSTGRES_DB=SchoolOrganisation
+
+  frontend:
+    container_name: frontend
+    build: ./sample-application-frontend
+    ports:
+      - "80:80"
+    networks:
+      - app-network
+
+  prometheus:
+    image: prom/prometheus:v2.30.2
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/rules.yml:/etc/prometheus/rules.yml
+    networks:
+      - monitoring-network
+      - app-network
+
+  grafana:
+    image: grafana/grafana:8.2.0
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+    volumes:
+      - ./grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+      - ./grafana/prometheus-dashboard.json:/var/lib/grafana/dashboards/prometheus-dashboard.json
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_DATABASE_TYPE=postgres
+      - GF_DATABASE_HOST=postgres
+      - GF_DATABASE_USER=user
+      - GF_DATABASE_PASSWORD=password
+    networks:
+      - monitoring-network
+
+  postgres:
+    image: postgres:13
+    environment:
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_USER=user
+      - POSTGRES_DB=grafana
+    networks:
+      - monitoring-network
+    restart: on-failure
+
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter
+    environment:
+      - DATA_SOURCE_NAME=postgresql://takima:takimapass@database:5432/SchoolOrganisation?sslmode=disable
+    networks:
+      - monitoring-network
+      - app-network
+
+  alertmanager:
+    image: prom/alertmanager:v0.18.0
+    container_name: alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    networks:
+      - monitoring-network
+
+volumes:
+  my_db_volume:
+    driver: local
+
+networks:
+  app-network:
+  monitoring-network:

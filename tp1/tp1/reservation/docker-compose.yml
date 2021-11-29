@@ -1,0 +1,119 @@
+version: "3.7"
+
+services:
+  resa-backend:
+    container_name: resa-backend
+    build: .
+    ports:
+      - "8080:8080"
+    restart: always
+    networks:
+      - resa_net
+      - app-network
+    depends_on:
+      - resa-liquibase
+
+  resa-db:
+    container_name: resa-db
+    image: postgres:14
+    networks:
+      - resa_net
+      - app-network
+    ports:
+      - "5432:5432"
+    volumes:
+      - resa-db:/var/lib/postgresql/data
+      - ./db/resa-db/conf/postgres.conf:/etc/postgresql/postgresql.conf:ro
+    env_file:
+      - ./db/resa-db/.env
+    restart: always
+    command:
+      - "postgres"
+      - "-c"
+      - "config_file=/etc/postgresql/postgresql.conf"
+      
+
+  resa-liquibase:
+    image: liquibase/liquibase:4.2.0
+    container_name: resa-liquibase
+    env_file:
+      - ./db/db-dataloader/.env
+    volumes:
+      - ./db/db-dataloader/resources/changelog:/liquibase/changelog
+      - ./db/db-dataloader/resources/migrations:/liquibase/migrations
+      - ./db/db-dataloader/liquibase_policy_init.sh:/liquibase/liquibase_policy_init.sh:ro
+      - ./db/db-dataloader/wait-for-it.sh:/liquibase/wait-for-it.sh
+    entrypoint: ./liquibase_policy_init.sh
+    networks:
+      - resa_net
+    depends_on:
+      - resa-db
+
+  prometheus:
+    image: prom/prometheus:v2.30.2
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/rules.yml:/etc/prometheus/rules.yml
+    networks:
+      - monitoring-network
+      - app-network
+
+  grafana:
+    image: grafana/grafana:8.2.0
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+    volumes:
+      - ./grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+      - ./grafana/prometheus-dashboard.json:/var/lib/grafana/dashboards/prometheus-dashboard.json
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_DATABASE_TYPE=postgres
+      - GF_DATABASE_HOST=postgres
+      - GF_DATABASE_USER=user
+      - GF_DATABASE_PASSWORD=password
+    networks:
+      - monitoring-network
+
+  postgres:
+    image: postgres:13
+    environment:
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_USER=user
+      - POSTGRES_DB=grafana
+    networks:
+      - monitoring-network
+    restart: on-failure
+
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter
+    environment:
+      - DATA_SOURCE_NAME=postgresql://postgres:password@resa-db:5432/reservation?sslmode=disable
+    networks:
+      - monitoring-network
+      - app-network
+
+  alertmanager:
+    image: prom/alertmanager:v0.18.0
+    container_name: alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    networks:
+      - monitoring-network
+
+networks:
+  resa_net:
+    name: resa_net
+  app-network:
+  monitoring-network:
+
+volumes:
+  resa-db:
+    name: resa-db
