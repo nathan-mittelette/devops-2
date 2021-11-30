@@ -1,0 +1,20 @@
+global:
+
+templates:
+  - '/etc/alertmanager/template/*.tmpl'
+
+route:
+ group_by: ['alertname']
+ # If an alert isn't caught by a route, send it slack.
+ receiver: slack_general
+
+receivers:
+  - name: slack_general
+    slack_configs:
+      - api_url: https://hooks.slack.com/services/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   # <-- Pensez à mettre votre URL de webhook slack ici
+        channel: alerts                                              # <-- Penser à mettre le bon channel ici
+        icon_emoji: ":rotating_light:"                                    # <-- L'emoji de votre choix pour s'afficher dans le channel slack
+        title_link: "http://127.0.0.1:9090/alerts"                        # <-- Ici on met l'url d'alertmanage pour reprendre le nom des alertes sur le /alerts
+        send_resolved: true                                               # <-- Ce booléen nous permet d'envoyer une seconde alerte quand elle est résolue
+        title: 'Beldjilali - Mittelette backend fail'                          # <-- Reprise du template
+        text: 'Slack message'                   # <-- Reprise du template

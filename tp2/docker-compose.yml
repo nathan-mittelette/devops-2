@@ -1,0 +1,92 @@
+version: '3.7'
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.15.2
+    container_name: elasticsearch
+    environment:
+      - xpack.security.enabled=false
+      - discovery.type=single-node
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - resa-networks
+    ports:
+      - 9200:9200
+      - 9300:9300
+
+  kibana:
+    container_name: kibana
+    image: docker.elastic.co/kibana/kibana:7.15.2
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    networks:
+      - resa-networks
+    ports:
+      - 5601:5601
+    depends_on:
+      - elasticsearch
+
+  prometheus:
+    image: prom/prometheus:v2.30.2
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - resa-networks
+
+  grafana:
+    image: grafana/grafana:8.2.0
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+      - ./grafana/prometheus-dashboard.json:/var/lib/grafana/dashboards/prometheus-dashboard.json
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_DATABASE_TYPE=postgres
+      - GF_DATABASE_HOST=postgres
+      - GF_DATABASE_USER=user
+      - GF_DATABASE_PASSWORD=password
+    networks:
+      - resa-networks
+
+  postgres:
+    image: postgres:13
+    environment:
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_USER=user
+      - POSTGRES_DB=grafana
+    networks:
+      - resa-networks
+    restart: on-failure
+
+  elasticsearch_exporter:
+    image: quay.io/prometheuscommunity/elasticsearch-exporter:latest
+    command:
+      - '--es.uri=http://elasticsearch:9200'
+    networks:
+      - resa-networks
+    restart: always
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:7.15.2
+    user: root
+    command: 
+      - '-e'
+      - '--strict.perms=false'
+    networks:
+      - resa-networks
+    volumes:
+      - ./filebeat/filebeat.docker.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /var/lib/docker/containers/:/var/lib/docker/containers/:ro
+
+volumes:
+  elasticsearch-data:
+    driver: local
+
+networks:
+  resa-networks:

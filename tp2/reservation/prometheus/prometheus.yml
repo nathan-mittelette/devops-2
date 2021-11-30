@@ -1,0 +1,37 @@
+global:
+  scrape_interval: 15s # Par défaut prometheus va scrapper les cibles toutes les 15 secondes
+
+  # Attach these labels to any time series or alerts when communicating with
+  # external systems (federation, remote storage, Alertmanager).
+  external_labels:
+    env: 'infrastructure'   # C'est simplement le nom de votre environnement
+
+
+rule_files:
+  - rules.yml
+
+# Alerting specifies settings related to the Alertmanager
+alerting:
+  alertmanagers:
+    - static_configs:
+      - targets:
+        # Alertmanager's default port is 9093
+        - alertmanager:9093
+
+# la scrape configuration de prometheus, les hosts qu'il va contacter pour chercher les métrique
+scrape_configs:
+  - job_name: 'prometheus'     # <-- j'ai mis ce titre de job mais le truc c'est de mettre un nom de job explicite
+    static_configs:
+      - targets: ['resa-backend:8080']
+    scrape_interval: 5s
+    metrics_path: /api/actuator/prometheus
+
+  - job_name: 'database'     # <-- j'ai mis ce titre de job mais le truc c'est de mettre un nom de job explicite
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 5s
+
+  - job_name: 'elasticsearch'     # <-- j'ai mis ce titre de job mais le truc c'est de mettre un nom de job explicite
+    static_configs:
+      - targets: ['elasticsearch_exporter:9114']
+    scrape_interval: 5s

@@ -1,0 +1,14 @@
+global:
+  scrape_interval: 15s # Par défaut prometheus va scrapper les cibles toutes les 15 secondes
+
+  # Attach these labels to any time series or alerts when communicating with
+  # external systems (federation, remote storage, Alertmanager).
+  external_labels:
+    env: 'infrastructure'   # C'est simplement le nom de votre environnement
+
+# la scrape configuration de prometheus, les hosts qu'il va contacter pour chercher les métrique
+scrape_configs:
+  - job_name: 'elasticsearch'     # <-- j'ai mis ce titre de job mais le truc c'est de mettre un nom de job explicite
+    static_configs:
+      - targets: ['elasticsearch_exporter:9114']
+    scrape_interval: 5s
