@@ -3,6 +3,7 @@ package io.takima.reservation.trains.presentation;
 import io.takima.reservation.trains.dto.requests.TrainCreationRequest;
 import io.takima.reservation.trains.dto.responses.TrainDto;
 import io.takima.reservation.trains.service.TrainService;
+import io.takima.reservation.utils.monitoring.Monitored;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

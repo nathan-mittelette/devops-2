@@ -36,8 +36,6 @@ public class InvoiceController {
         }
 
         try (InputStream in = new FileInputStream(url)) {
-
-
             return ResponseEntity.ok(in.readAllBytes());
         }
     }

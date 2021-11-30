@@ -36,7 +36,6 @@ services:
       - "9090:9090"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./prometheus/rules.yml:/etc/prometheus/rules.yml
     networks:
       - monitoring-network
       - app-network
@@ -78,16 +77,6 @@ services:
     networks:
       - monitoring-network
       - app-network
-
-  alertmanager:
-    image: prom/alertmanager:v0.18.0
-    container_name: alertmanager
-    ports:
-      - "9093:9093"
-    volumes:
-      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
-    networks:
-      - monitoring-network
 
 volumes:
   my_db_volume:
