@@ -1,0 +1,16 @@
+version: "3.7"
+services:
+  gatling_tests:
+    container_name: gatling_test
+    build: ../tests-perfs/
+    env_file:
+      - ../tests-perfs/.env
+    networks: 
+      - resa_net
+    volumes:
+    - ../tests-perfs/reports:/usr/src/app/target/gatling
+
+
+networks:
+  resa_net:
+    name: resa_net

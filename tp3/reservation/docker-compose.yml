@@ -1,0 +1,67 @@
+version: "3.3"
+
+services:
+  resa-backend:
+    container_name: resa-backend
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - OTEL_TRACES_EXPORTER=jaeger
+      - OTEL_EXPORTER_JAEGER_ENDPOINT=http://jaeger:14250
+      - OTEL_SERVICE_NAME=resaApp
+    restart: always
+    networks:
+      - resa_net
+
+  resa-db:
+    container_name: resa-db
+    build: db/resa-db
+    networks:
+      - resa_net
+    ports:
+      - "5432:5432"
+    volumes:
+      - resa-db:/var/lib/postgresql/data
+      - ./db/resa-db/conf/postgres.conf:/etc/postgresql/postgresql.conf:ro
+    env_file:
+      - ./db/resa-db/.env
+    restart: always
+    command:
+      - "postgres"
+      - "-c"
+      - "config_file=/etc/postgresql/postgresql.conf"
+
+
+  resa-liquibase:
+    image: liquibase/liquibase:4.2.0
+    container_name: resa-liquibase
+    env_file:
+      - ./db/db-dataloader/.env
+    volumes:
+      - ./db/db-dataloader/resources/changelog:/liquibase/changelog
+      - ./db/db-dataloader/resources/migrations:/liquibase/migrations
+      - ./db/db-dataloader/liquibase_policy_init.sh:/liquibase/liquibase_policy_init.sh:ro
+    entrypoint: ./liquibase_policy_init.sh
+    restart: on-failure
+    networks:
+      - resa_net
+    depends_on:
+      - resa-db
+
+  jaeger:
+    container_name: jaeger
+    image: jaegertracing/opentelemetry-all-in-one
+    ports:
+      - "16686:16686"
+    environment:
+      - JAEGER_AGENT_HOST=jaeger
+    networks:
+      - resa_net
+    restart: on-failure
+
+networks:
+  resa_net:
+
+volumes:
+  resa-db:
